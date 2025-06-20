@@ -1,4 +1,4 @@
-# 📸 Pixisphere Frontend Assignment (Dark Mode Edition)
+# 📸 Pixisphere(Dark Mode Edition)
 
 Welcome to the frontend challenge for Pixisphere – a platform connecting users to top-tier photographers for maternity, wedding, birthday, and family shoots.
 
