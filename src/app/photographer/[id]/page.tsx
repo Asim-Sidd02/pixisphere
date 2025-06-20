@@ -35,7 +35,7 @@ export default function PhotographerProfile() {
   useEffect(() => {
     const fetchPhotographer = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/photographers/${id}`);
+        const res = await fetch(`https://pixispherejsonapi.onrender.com/photographers/${id}`);
         const data = await res.json();
         setPhotographer(data);
         setLoading(false);

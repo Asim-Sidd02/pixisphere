@@ -7,6 +7,7 @@ import SearchBar from "./components/SearchBar";
 import SortDropdown from "./components/SortDropdown";
 import { Filter } from "lucide-react";
 import debounce from "lodash.debounce";
+import { useRouter } from 'next/navigation';
 
 interface Photographer {
   id: number;
@@ -41,7 +42,7 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState('');
   const [visibleCount, setVisibleCount] = useState(5); // Number of visible photographers
   const [showFilter, setShowFilter] = useState(false); // State to control filter sidebar visibility
-
+const router = useRouter();
   const availableCities = useMemo(
     () => [...new Set(photographers.map((p) => p.location))],
     [photographers]
@@ -56,7 +57,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('http://localhost:3001/photographers');
+        const res = await fetch('https://pixispherejsonapi.onrender.com/photographers');
         const data = await res.json();
         setPhotographers(data);
         setLoading(false);
@@ -176,7 +177,7 @@ export default function HomePage() {
                 <PhotographerCard
                   key={photographer.id}
                   photographer={photographer}
-                  onViewProfile={(id) => window.location.href = `/photographer/${id}`}
+                   onViewProfile={(id: number) => router.push(`/photographer/${id}`)}
                 />
               ))
             ) : (
