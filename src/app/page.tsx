@@ -1,103 +1,204 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useMemo, useState } from "react";
+import PhotographerCard from "./components/PhotographerCard";
+import FilterSidebar from "./components/FilterSidebar";
+import SearchBar from "./components/SearchBar";
+import SortDropdown from "./components/SortDropdown";
+import { Filter } from "lucide-react";
+import debounce from "lodash.debounce";
+
+interface Photographer {
+  id: number;
+  name: string;
+  location: string;
+  price: number;
+  rating: number;
+  styles: string[];
+  tags: string[];
+  bio: string;
+  profilePic: string;
+  portfolio: string[];
+  reviews: {
+    name: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }[];
+}
+
+export default function HomePage() {
+  const [photographers, setPhotographers] = useState<Photographer[]>([]);
+  const [filteredPhotographers, setFilteredPhotographers] = useState<Photographer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(50000);
+  const [sortBy, setSortBy] = useState('');
+  const [visibleCount, setVisibleCount] = useState(5); // Number of visible photographers
+  const [showFilter, setShowFilter] = useState(false); // State to control filter sidebar visibility
+
+  const availableCities = useMemo(
+    () => [...new Set(photographers.map((p) => p.location))],
+    [photographers]
+  );
+
+  const availableStyles = useMemo(
+    () => [...new Set(photographers.flatMap((p) => p.styles))],
+    [photographers]
+  );
+
+  // Fetch photographers
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/photographers');
+        const data = await res.json();
+        setPhotographers(data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch photographers', err);
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Debounce search input
+  const debounced = useMemo(() => debounce((val) => setDebouncedSearch(val), 300), []);
+  useEffect(() => {
+    debounced(searchQuery);
+  }, [searchQuery]);
+
+  // Apply filters
+  useEffect(() => {
+    let results = photographers.filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.location.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.tags.some((tag) => tag.toLowerCase().includes(debouncedSearch.toLowerCase()));
+
+      const matchesStyles =
+        selectedStyles.length === 0 || selectedStyles.every((style) => p.styles.includes(style));
+
+      const matchesCity = selectedCity === '' || p.location === selectedCity;
+      const matchesRating = selectedRating === 0 || p.rating >= selectedRating;
+      const matchesPrice = p.price >= minPrice && p.price <= maxPrice;
+
+      return matchesSearch && matchesStyles && matchesCity && matchesRating && matchesPrice;
+    });
+
+    if (sortBy === 'priceLowHigh') {
+      results.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'ratingHighLow') {
+      results.sort((a, b) => b.rating - a.rating);
+    } else if (sortBy === 'recent') {
+      results.sort((a, b) => b.id - a.id); // simulate recent using ID
+    }
+
+    setFilteredPhotographers(results);
+  }, [photographers, debouncedSearch, selectedStyles, selectedCity, selectedRating, minPrice, maxPrice, sortBy]);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prevCount) => prevCount + 5); // Load 5 more photographers
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="min-h-screen bg-gray-900 text-gray-200 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-6 text-white">
+          📸 Explore Photographers
+        </h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        {/* Mobile Filter Button */}
+        <div className="flex justify-between items-center mb-4 md:hidden">
+          <button
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition"
+            onClick={() => setShowFilter(true)}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <Filter className="w-5 h-5" />
+            Filters
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {/* Search & Sort */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <SearchBar searchTerm={searchQuery} onSearchChange={setSearchQuery} />
+          <SortDropdown
+            selectedSort={sortBy}
+            onSortChange={setSortBy}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+
+        {/* Layout */}
+        <div className="flex flex-col md:flex-row gap-6 relative">
+          {/* Sidebar (collapsible on mobile) */}
+          <FilterSidebar
+            selectedStyles={selectedStyles}
+            selectedCity={selectedCity}
+            selectedRating={selectedRating}
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            onStyleChange={(style) => {
+              if (selectedStyles.includes(style)) {
+                setSelectedStyles(selectedStyles.filter((s) => s !== style));
+              } else {
+                setSelectedStyles([...selectedStyles, style]);
+              }
+            }}
+            onCityChange={setSelectedCity}
+            onRatingChange={setSelectedRating}
+            onPriceChange={(min, max) => {
+              setMinPrice(min);
+              setMaxPrice(max);
+            }}
+            availableCities={availableCities}
+            availableStyles={availableStyles}
+            isOpen={showFilter}
+            onClose={() => setShowFilter(false)}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+          {/* Photographer Grid */}
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loading ? (
+              [...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-gray-800 animate-pulse p-4 rounded-2xl h-80 shadow-md"
+                />
+              ))
+            ) : filteredPhotographers.length > 0 ? (
+              filteredPhotographers.slice(0, visibleCount).map((photographer) => (
+                <PhotographerCard
+                  key={photographer.id}
+                  photographer={photographer}
+                  onViewProfile={(id) => window.location.href = `/photographer/${id}`}
+                />
+              ))
+            ) : (
+              <p className="text-center col-span-full text-gray-400">
+                No photographers match your filters.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Load More Button */}
+        {filteredPhotographers.length > visibleCount && (
+          <div className="mt-6 text-center">
+            <button
+              onClick={handleLoadMore}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              Load More
+            </button>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
